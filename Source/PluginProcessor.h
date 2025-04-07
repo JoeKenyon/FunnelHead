@@ -56,22 +56,15 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
-    
-    void setVolume(double _volume){ volume.setGainLinear(_volume);}
-    void setPreGain(double _pregain){ funnel.setDrive(_pregain);}
-    void setSplitFreq(double _splitfreq){ bandSplitter.setSplitFreq(_splitfreq);}
-    void setLows(double _lows){ bandSplitter.setLowGain(_lows);}
-    void setHighs(double _highs){ bandSplitter.setHighGain(_highs);}
-    void setPostGain(double _postgain){ postGain.setGainDecibels(_postgain);}
-
-private: 
-    
+        
+    juce::AudioProcessorValueTreeState pvms;
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+private:
     Funnel funnel;
     juce::dsp::Gain<float> postGain;
     BandSplitter bandSplitter;
     juce::dsp::Convolution convolution;
     juce::dsp::Gain<float> volume;
-
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FunnelHeadAudioProcessor)
 };

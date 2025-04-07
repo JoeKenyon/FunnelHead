@@ -35,6 +35,13 @@ private:
     juce::Slider highs;
     juce::Slider postgain;
     juce::Image background;
+    
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> volumeAt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> pregainAt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> splitfreqAt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lowsAt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> highsAt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> postgainAt;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FunnelHeadAudioProcessorEditor)
 };

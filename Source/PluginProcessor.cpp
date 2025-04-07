@@ -19,7 +19,7 @@ FunnelHeadAudioProcessor::FunnelHeadAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ),pvms(*this, nullptr, "params", createParameterLayout())
 #endif
 {
     const char* ampConvolutionData = BinaryData::American_Twin_2x12_Dark_Mix_wav;
@@ -115,13 +115,6 @@ void FunnelHeadAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     volume.prepare(spec);
     volume.setRampDurationSeconds(0.1);
     convolution.prepare(spec);
-    
-    setVolume(1.0f);
-    setPreGain(1.0f);
-    setSplitFreq(1000.0f);
-    setLows(1.0f);
-    setHighs(1.0f);
-    setPostGain(1.0f);
 }
 
 void FunnelHeadAudioProcessor::releaseResources()
@@ -158,6 +151,13 @@ bool FunnelHeadAudioProcessor::isBusesLayoutSupported (const BusesLayout& layout
 
 void FunnelHeadAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    volume.setGainLinear(*pvms.getRawParameterValue("volume")*0.01f);
+    funnel.setDrive(*pvms.getRawParameterValue("pregain"));
+    postGain.setGainDecibels(*pvms.getRawParameterValue("postgain"));
+    bandSplitter.setSplitFreq(*pvms.getRawParameterValue("splitfreq"));
+    bandSplitter.setLowGain(*pvms.getRawParameterValue("lows"));
+    bandSplitter.setHighGain(*pvms.getRawParameterValue("highs"));
+
     juce::dsp::AudioBlock<float> block(buffer);
     juce::dsp::ProcessContextReplacing<float> context(block);
     
@@ -182,15 +182,17 @@ juce::AudioProcessorEditor* FunnelHeadAudioProcessor::createEditor()
 //==============================================================================
 void FunnelHeadAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    auto state = pvms.copyState();
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
 void FunnelHeadAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    std::unique_ptr<juce::XmlElement> xml (getXmlFromBinary(data, sizeInBytes));
+    
+    if (xml && xml->hasTagName(pvms.state.getType()))
+        pvms.replaceState(juce::ValueTree::fromXml(*xml));
 }
 
 //==============================================================================
@@ -198,4 +200,53 @@ void FunnelHeadAudioProcessor::setStateInformation (const void* data, int sizeIn
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new FunnelHeadAudioProcessor();
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout FunnelHeadAudioProcessor::createParameterLayout()
+{
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{"volume", 1},               // Parameter ID
+        "Volume",                                     // Parameter Name
+        juce::NormalisableRange<float>(0, 100, 1),    // Normalisable Range
+        100.0f                                        // Default Value
+    ));
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{"pregain", 1},              // Parameter ID
+        "Pregain",                                    // Parameter Name
+        juce::NormalisableRange<float>(0, 35, 0.1),   // Normalisable Range
+        0                                             // Default Value
+    ));
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{"postgain", 1},             // Parameter ID
+        "Postgain",                                   // Parameter Name
+        juce::NormalisableRange<float>(-10, 25, 0.1), // Normalisable Range
+        0                                             // Default Value
+    ));
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{"splitfreq", 1},            // Parameter ID
+        "Splitfreq",                                  // Parameter Name
+        juce::NormalisableRange<float>(100, 6000, 1), // Normalisable Range
+        1000                                          // Default Value
+    ));
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{"lows", 1},                 // Parameter ID
+        "Lows",                                       // Parameter Name
+        juce::NormalisableRange<float>(-10, 25, 0.1), // Normalisable Range
+        0                                             // Default Value
+    ));
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{"highs", 1},                // Parameter ID
+        "Highs",                                      // Parameter Name
+        juce::NormalisableRange<float>(-10, 25, 0.1), // Normalisable Range
+        0                                             // Default Value
+    ));
+
+    return { params.begin(), params.end() };
 }
