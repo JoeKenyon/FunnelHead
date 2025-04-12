@@ -45,7 +45,6 @@ public:
         juce::dsp::ProcessContextReplacing<float> OSContext(OSBlock);
         
         waveShaper.process(OSContext);
-        OSContext.getOutputBlock() *= 0.7f;
         
         auto& outputBlock = context.getOutputBlock();
         oversampler.processSamplesDown(outputBlock);
